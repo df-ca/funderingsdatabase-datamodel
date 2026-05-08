@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conceptueel datamodel – Definitiestudie verkenning gezamenlijke Friese funderingsdatabase</title>
+<style>
+ * { margin: 0; padding: 0; box-sizing: border-box; }
+ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f8; color: #2D3748; }
+
+ header {
+ background: #2D3748; color: #fff; padding: 20px 28px;
+ display: flex; align-items: center; gap: 20px;
+ }
+ header .logo { font-size: 24px; font-weight: bold; line-height: 1; }
+ header .logo span { color: #2C7BB6; }
+ header h1 { font-size: 18px; font-weight: 600; }
+ header .sub { font-size: 12px; color: #a0b0c0; margin-top: 3px; }
+
+ /* Tab navigation */
+ .tabs {
+ background: #2D3748; padding: 0 28px; display: flex; gap: 2px;
+ border-bottom: 3px solid #2C7BB6;
+ }
+ .tab {
+ padding: 10px 18px; color: #8899aa; font-size: 13px; cursor: pointer;
+ border-radius: 6px 6px 0 0; transition: all 0.2s; font-weight: 500;
+ }
+ .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
+ .tab.active { color: #fff; background: #2C7BB6; }
+
+ .container { display: flex; height: calc(100vh - 120px); }
+
+ /* Left panel - legend */
+ .legend {
+ width: 280px; min-width: 280px; background: #fff; border-right: 1px solid #ddd;
+ padding: 16px; overflow-y: auto; font-size: 13px;
+ }
+ .legend h3 { font-size: 12px; color: #2C7BB6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+ .legend-item {
+ display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+ cursor: pointer; padding: 5px 6px; border-radius: 5px; transition: background 0.2s;
+ font-size: 12px;
+ }
+ .legend-item:hover { background: #f0f4f8; }
+ .legend-item .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+ .legend-section { margin-bottom: 14px; }
+ .legend-divider { border: none; border-top: 1px solid #e8e8e8; margin: 10px 0; }
+
+ /* Canvas area */
+ .canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+ .view-panel { display: none; width: 100%; height: 100%; overflow-y: auto; }
+ .view-panel.active { display: block; }
+ svg { width: 100%; height: 100%; }
+
+ /* Tooltip */
+ .tooltip {
+ position: absolute; background: #2D3748; color: #fff; padding: 14px 18px;
+ border-radius: 8px; font-size: 13px; line-height: 1.5; max-width: 400px;
+ pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100;
+ box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+ }
+ .tooltip h4 { color: #FFBA00; margin-bottom: 6px; font-size: 14px; }
+ .tooltip .fields { color: #a0c0e0; font-size: 12px; margin-top: 6px; }
+ .tooltip .ws-badge { display: inline-block; background: #4A9E6F; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-top: 4px; }
+ .tooltip .loket-badge { display: inline-block; background: #8B5CF6; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-top: 4px; margin-left: 4px; }
+ .tooltip .rel-list { margin-top: 8px; font-size: 11px; color: #a0c0e0; }
+
+ /* Info panel */
+ .info-panel {
+ position: absolute; bottom: 12px; left: 12px; right: 12px;
+ background: #fff; border-radius: 10px; padding: 12px 16px;
+ box-shadow: 0 2px 12px rgba(0,0,0,0.08); font-size: 12px; color: #555;
+ display: flex; gap: 20px; align-items: center;
+ }
+ .info-panel .stat { text-align: center; }
+ .info-panel .stat-num { font-size: 22px; font-weight: 700; color: #2C7BB6; }
+ .info-panel .stat-label { font-size: 10px; color: #888; }
+
+ /* Node styles */
+ .node { cursor: pointer; transition: transform 0.2s; }
+ .node:hover { filter: brightness(1.1); }
+ .node text { pointer-events: none; }
+ .link { stroke-opacity: 0.5; fill: none; }
+ .link-label { font-size: 9px; fill: #888; }
+
+ /* Bronnen/sources view */
+ .sources-grid {
+ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+ gap: 16px; padding: 24px;
+ }
+ .source-card {
+ background: #fff; border-radius: 10px; padding: 16px;
+ box-shadow: 0 1px 6px rgba(0,0,0,0.06); border-left: 4px solid #2C5F8A;
+ }
+ .source-card h4 { font-size: 14px; color: #2D3748; margin-bottom: 6px; }
+ .source-card .source-type { font-size: 11px; color: #888; margin-bottom: 8px; }
+ .source-card .source-detail { font-size: 12px; line-height: 1.6; color: #555; }
+ .source-card .entity-tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+ .source-card .entity-tag {
+ background: #f0f4f8; color: #2C7BB6; font-size: 10px; padding: 2px 6px;
+ border-radius: 3px; font-weight: 600;
+ }
+ .source-card.open { border-left-color: #4A9E6F; }
+ .source-card.ws { border-left-color: #0E9AA7; }
+ .source-card.extern { border-left-color: #8B5CF6; }
+
+ /* Informatieniveaus view */
+ .levels-container { padding: 24px; max-width: 900px; margin: 0 auto; }
+ .level-row {
+ display: flex; align-items: stretch; margin-bottom: 2px;
+ }
+ .level-label {
+ width: 160px; min-width: 160px; padding: 16px; color: #fff; font-weight: 700;
+ font-size: 14px; display: flex; align-items: center; justify-content: center;
+ text-align: center; border-radius: 8px 0 0 8px;
+ }
+ .level-content {
+ flex: 1; padding: 16px 20px; background: #fff;
+ border-radius: 0 8px 8px 0; border: 1px solid #e8e8e8; border-left: none;
+ }
+ .level-content h4 { font-size: 13px; margin-bottom: 6px; }
+ .level-content p { font-size: 12px; color: #666; line-height: 1.5; }
+ .level-examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+ .level-example {
+ background: #f0f4f8; padding: 3px 8px; border-radius: 4px; font-size: 11px; color: #2C7BB6;
+ }
+ .metadata-bar {
+ margin-top: 16px; padding: 12px 16px; background: #2D3748; color: #a0c0e0;
+ border-radius: 8px; font-size: 12px; text-align: center;
+ }
+ .metadata-bar strong { color: #FFBA00; }
+
+ /* Ketenzicht view */
+ .keten-container { padding: 24px; max-width: 1000px; margin: 0 auto; }
+ .keten-flow {
+ display: flex; align-items: center; justify-content: center;
+ flex-wrap: wrap; gap: 8px; margin: 24px 0;
+ }
+ .keten-step {
+ background: #fff; border-radius: 10px; padding: 16px; text-align: center;
+ width: 140px; box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+ border-top: 4px solid #2C5F8A;
+ }
+ .keten-step .step-num { font-size: 28px; font-weight: 800; color: #2C7BB6; }
+ .keten-step .step-label { font-size: 13px; font-weight: 600; margin: 4px 0; }
+ .keten-step .step-desc { font-size: 11px; color: #888; }
+ .keten-arrow { font-size: 24px; color: #ccc; }
+ .keten-return {
+ text-align: center; margin: 16px 0; padding: 12px;
+ background: #f0f8f0; border-radius: 8px; font-size: 13px; color: #4A9E6F;
+ }
+ .keten-explanation {
+ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 20px;
+ }
+ .keten-card {
+ background: #fff; padding: 16px; border-radius: 8px;
+ box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+ }
+ .keten-card h4 { font-size: 13px; color: #2C7BB6; margin-bottom: 6px; }
+ .keten-card p { font-size: 12px; color: #666; line-height: 1.5; }
+
+ /* Edit documentation view */
+ .docs-container {
+ padding: 24px 32px; max-width: 800px; overflow-y: auto; height: 100%;
+ }
+ .docs-container h2 { font-size: 20px; color: #2D3748; margin: 24px 0 12px; border-bottom: 2px solid #2C7BB6; padding-bottom: 8px; }
+ .docs-container h3 { font-size: 16px; color: #2C7BB6; margin: 16px 0 8px; }
+ .docs-container p { font-size: 13px; line-height: 1.7; color: #444; margin-bottom: 10px; }
+ .docs-container code {
+ background: #f0f4f8; padding: 2px 6px; border-radius: 3px;
+ font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: #2C7BB6;
+ }
+ .docs-container pre {
+ background: #2D3748; color: #e0e8f0; padding: 16px; border-radius: 8px;
+ font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.6;
+ overflow-x: auto; margin: 12px 0;
+ }
+ .docs-container .tip {
+ background: #f0f8f0; border-left: 4px solid #4A9E6F; padding: 12px 16px;
+ border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 12px;
+ }
+ .docs-container ul { margin: 8px 0 8px 20px; font-size: 13px; line-height: 1.7; color: #444; }
+ .docs-container li { margin-bottom: 4px; }
+
+
+ /* Betrouwbaarheidskader */
+ .quality-legend { margin-bottom: 14px; }
+ .quality-item { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 11px; }
+ .quality-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+ .quality-desc { color: #666; font-size: 10px; margin-left: 16px; margin-bottom: 4px; }
+
+ /* Geonovum badge in tooltip */
+ .tooltip .geonovum-badge { display: inline-block; background: #1a6b4a; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-top: 4px; margin-left: 4px; }
+ .tooltip .geonovum-mapping { color: #8ed4b2; font-size: 11px; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+ <div class="logo" style="font-size:16px; letter-spacing:1px;">&#9670;</div>
+ <div>
+ <h1>Conceptueel datamodel – Definitiestudie verkenning gezamenlijke Friese funderingsdatabase</h1>
+ <div class="sub">Mei 2026, Concept</div>
+ </div>
+</header>
+
+<div class="tabs">
+ <div class="tab active" data-view="stermodel">Stermodel</div>
+ <div class="tab" data-view="bronnen">Databronnen</div>
+ <div class="tab" data-view="niveaus">Informatieniveaus</div>
+ <div class="tab" data-view="ketenzicht">Keteninzicht</div>
+ <div class="tab" data-view="casussen">Voorbeeldpand</div>
+</div>
+
+<div class="container">
+ <div class="legend" id="legend">
+ <div class="legend-section">
+ <h3>Anker-entiteit</h3>
+ <div class="legend-item" data-entity="PAND"><div class="dot" style="background:#FFBA00"></div>PAND (BAG-ID)</div>
+ </div>
+ <hr class="legend-divider">
+ <div class="legend-section">
+ <h3>8 Kernentiteiten</h3>
+ <div class="legend-item" data-entity="FUNDERING"><div class="dot" style="background:#2C7BB6"></div>Fundering</div>
+ <div class="legend-item" data-entity="BODEM"><div class="dot" style="background:#2C7BB6"></div>Bodem</div>
+ <div class="legend-item" data-entity="WATER"><div class="dot" style="background:#2C7BB6"></div>Water / Grondwater</div>
+ <div class="legend-item" data-entity="METING"><div class="dot" style="background:#2C7BB6"></div>Meting / Monitoring</div>
+ <div class="legend-item" data-entity="RISICO"><div class="dot" style="background:#2C7BB6"></div>Risico-indicator</div>
+ <div class="legend-item" data-entity="MAATREGEL"><div class="dot" style="background:#2C7BB6"></div>Maatregel</div>
+ <div class="legend-item" data-entity="SCHADE"><div class="dot" style="background:#2C7BB6"></div>Schade</div>
+ <div class="legend-item" data-entity="MELDING"><div class="dot" style="background:#2C7BB6"></div>Melding</div>
+ </div>
+ <hr class="legend-divider">
+ <div class="legend-section">
+ <h3>Uitbreiding fase 2/3</h3>
+ <div class="legend-item" data-entity="ACTIE"><div class="dot" style="background:#4A9E6F"></div>Actieregistratie</div>
+ <div class="legend-item" data-entity="EIGENAAR"><div class="dot" style="background:#4A9E6F"></div>Eigenaarportaal</div>
+ </div>
+ <hr class="legend-divider">
+ <div class="legend-section quality-legend">
+ <h3>Betrouwbaarheidskader</h3>
+ <div class="quality-item"><div class="quality-dot" style="background:#2E7D32"></div><strong>Feitelijk</strong></div>
+ <div class="quality-desc">Gemeten, geregistreerd of gevalideerd</div>
+ <div class="quality-item"><div class="quality-dot" style="background:#1976D2"></div><strong>Waarschijnlijk</strong></div>
+ <div class="quality-desc">Afgeleid uit betrouwbaar model</div>
+ <div class="quality-item"><div class="quality-dot" style="background:#F9A825"></div><strong>Indicatief</strong></div>
+ <div class="quality-desc">Geschat op basis van gebiedskenmerken</div>
+ <div class="quality-item"><div class="quality-dot" style="background:#B0BEC5"></div><strong>Onbekend</strong></div>
+ <div class="quality-desc">Geen data beschikbaar</div>
+ <div style="font-size:10px; color:#888; margin-top:6px; line-height:1.4;">Elk attribuut krijgt een van deze vier duidingslabels mee als metadata.</div>
+ </div>
+ <hr class="legend-divider">
+ <div class="legend-section">
+ <h3>Privacy (AVG)</h3>
+ <div style="font-size:10px; color:#666; line-height:1.5;">
+ <div style="margin-bottom:3px;"><span style="display:inline-block;width:8px;height:8px;background:#4A9E6F;border-radius:2px;margin-right:4px;"></span><strong>Openbaar</strong> – gebiedsstatistieken</div>
+ <div style="margin-bottom:3px;"><span style="display:inline-block;width:8px;height:8px;background:#2C7BB6;border-radius:2px;margin-right:4px;"></span><strong>Intern</strong> – pandspecifieke data</div>
+ <div style="margin-bottom:3px;"><span style="display:inline-block;width:8px;height:8px;background:#F9A825;border-radius:2px;margin-right:4px;"></span><strong>Beperkt</strong> – geautoriseerde gebruikers</div>
+ <div style="margin-bottom:3px;"><span style="display:inline-block;width:8px;height:8px;background:#cc3333;border-radius:2px;margin-right:4px;"></span><strong>Gevoelig</strong> – persoonsgegevens (fase 2/3)</div>
+ </div>
+ </div>
+ </div>
+
+ <div class="canvas-wrap">
+ <!-- STERMODEL VIEW -->
+ <div class="view-panel active" id="view-stermodel">
+ <svg id="diagram"></svg>
+ <div class="tooltip" id="tooltip"></div>
+ <div class="info-panel">
+ <div style="font-size: 11px; color: #666;">
+ Klik op een entiteit voor details. <span style="color:#FFBA00; font-weight:600;">Geel</span> = Anker. <span style="color:#2C7BB6; font-weight:600;">Blauw</span> = Kern. <span style="color:#4A90D9; font-weight:600;">Lichtblauw</span> = Ondersteunend. <span style="color:#4A9E6F; font-weight:600;">Groen</span> = Uitbreiding fase 2/3. <span style="color:#4A9E6F;">Groene ring</span> = Wetterskip-data. <span style="color:#8B5CF6;">Paarse ring</span> = Loket-data. <span style="color:#E07020;">Oranje ring</span> = Gemeentelijke data.
+ </div>
+ </div>
+ </div>
+
+ <!-- BRONNEN VIEW -->
+ <div class="view-panel" id="view-bronnen">
+ <div class="sources-grid" id="sources-grid"></div>
+ </div>
+
+ <!-- INFORMATIENIVEAUS VIEW -->
+ <div class="view-panel" id="view-niveaus">
+ <div class="levels-container">
+ <h2 style="font-size:18px; margin-bottom:16px;">Informatieniveaus: van bron naar besluit</h2>
+ <p style="font-size:13px; color:#666; margin-bottom:20px;">Het model hanteert een expliciet onderscheid tussen drie informatieniveaus. Dit is niet alleen een classificatie achteraf, maar een actief ontwerpprincipe: elk gegeven in de database is herleidbaar tot zijn oorsprong. Per gegeven worden twee metadata-assen vastgelegd: de <strong>bron_categorie</strong> (oorsprong) en het <strong>zekerheidsniveau</strong> (Feitelijk, Waarschijnlijk, Indicatief, Onbekend).</p>
+ <div class="level-row">
+ <div class="level-label" style="background:#2C5F8A;">Niveau 1<br>BRONDATA</div>
+ <div class="level-content">
+ <h4>Feitelijke, waargenomen of geregistreerde informatie</h4>
+ <p>De laag van de werkelijkheid: wat is gemeten, geregistreerd of gezien. Brondata wordt niet bewerkt in het model maar opgeslagen zoals aangeleverd, met metadata over herkomst en kwaliteit. Er is geen interpretatie aan toegevoegd.</p>
+ </div>
+ </div>
+ <div class="level-row">
+ <div class="level-label" style="background:#2C7BB6;">Niveau 2<br>INDICATOREN</div>
+ <div class="level-content">
+ <h4>Afgeleide indicatoren: berekend, gemodelleerd, geclassificeerd</h4>
+ <p>Resultaat van bewerkingen op brondata. Voegen interpretatie toe aan feiten. Drie eisen: <strong>herleidbaarheid</strong> (terug te voeren op brondata), <strong>methode-transparantie</strong> (model en aannames vastgelegd) en <strong>onzekerheidslabel</strong> (expliciet bij elke indicator). Worden nooit als feiten gepresenteerd.</p>
+ </div>
+ </div>
+ <div class="level-row">
+ <div class="level-label" style="background:#2D3748;">Niveau 3<br>BESLUIT-<br>INFORMATIE</div>
+ <div class="level-content">
+ <h4>Geaggregeerd, gecontextualiseerd, bruikbaar voor besluitvorming</h4>
+ <p>Samengesteld uit brondata en indicatoren met toevoeging van context, aggregatie en interpretatie. Eis: <strong>reproduceerbaarheid</strong> — gegeven dezelfde brondata en indicatoren moet dezelfde rapportage tot stand kunnen komen.</p>
+ </div>
+ </div>
+ <div class="metadata-bar">
+ <strong>METADATA bij elk gegeven:</strong> Bron | Peildatum | Methode | Zekerheidslabel (Feitelijk / Waarschijnlijk / Indicatief / Onbekend) | Gevoeligheidsclassificatie | Versie
+ </div>
+ <div style="margin-top:12px; padding:10px 14px; background:#fff; border-radius:8px; border-left:3px solid #2C7BB6; font-size:12px; color:#555;">
+ <strong>Herleidbaarheidsketen:</strong> Besluitinformatie (niveau 3) verwijst naar indicatoren (niveau 2), die verwijzen naar brondata (niveau 1). Op elk niveau is vastgelegd welke informatie van het onderliggende niveau is gebruikt.
+ </div>
+ </div>
+ </div>
+
+ <!-- KETENZICHT VIEW -->
+ <div class="view-panel" id="view-ketenzicht">
+ <div class="keten-container">
+ <h2 style="font-size:18px; margin-bottom:8px;">Keteninzicht: Cyclus Funderingscasus</h2>
+ <p style="font-size:13px; color:#666; margin-bottom:20px;">De volledige keten van een funderingscasus per pand – van risico-indicatie tot terugkoppeling als data.</p>
+ <div class="keten-flow">
+ <div class="keten-step"><div class="step-num">1</div><div class="step-label">Pand</div><div class="step-desc">met/zonder risico-indicatie</div></div>
+ <div class="keten-arrow">&rarr;</div>
+ <div class="keten-step"><div class="step-num">2</div><div class="step-label">Melding</div><div class="step-desc">eigenaar signaleert bij loket</div></div>
+ <div class="keten-arrow">&rarr;</div>
+ <div class="keten-step"><div class="step-num">3</div><div class="step-label">Onderzoek</div><div class="step-desc">bureau voert onderzoek uit</div></div>
+ <div class="keten-arrow">&rarr;</div>
+ <div class="keten-step"><div class="step-num">4</div><div class="step-label">Diagnose</div><div class="step-desc">funderingstype, staat, oorzaak</div></div>
+ <div class="keten-arrow">&rarr;</div>
+ <div class="keten-step"><div class="step-num">5</div><div class="step-label">Maatregel</div><div class="step-desc">wel/niet herstel, type ingreep</div></div>
+ <div class="keten-arrow">&rarr;</div>
+ <div class="keten-step"><div class="step-num">6</div><div class="step-label">Terugkoppeling</div><div class="step-desc">resultaat terug als data</div></div>
+ </div>
+ <div class="keten-return">&#8617; Data vloeit terug: resultaat van maatregel wordt brondata voor het pand</div>
+ <div class="keten-explanation">
+ <div class="keten-card">
+ <h4>Waarom ketenzicht?</h4>
+ <p>Data over funderingen belandt nu op losse plekken: meldingen in een CRM, onderzoeksrapporten bij bureaus, maatregelen bij aannemers. Zonder samenhang is het lastig om per pand een compleet beeld te krijgen.</p>
+ </div>
+ <div class="keten-card">
+ <h4>Wat lost het op?</h4>
+ <p>De database brengt al die stappen samen tot één doorlopend beeld per pand. Op elk moment is zichtbaar waar een casus staat en welke informatie beschikbaar is.</p>
+ </div>
+ <div class="keten-card">
+ <h4>Randvoorwaarde</h4>
+ <p>Ketenzicht is een randvoorwaarde voor het Funderingsloket en voor betrouwbare beleidsrapportages. Het datamodel maakt dit mogelijk via relaties tussen MELDING, SCHADE, MAATREGEL en PAND.</p>
+ </div>
+ </div>
+ </div>
+ </div>
+
+
+ <!-- OVER DIT MODEL VIEW -->
+ <div class="view-panel" id="view-casussen">
+ <div class="docs-container">
+ <h2>Voorbeeldpand-flow: van indicatie tot maatregel</h2>
+ <p>Tijdens de werksessie van 22 maart 2026 zijn drie praktijkcasussen besproken uit een gezamenlijk funderingsonderzoek (2020) naar de effectiviteit van hoogwatercircuits. Deze casussen laten zien hoe het datamodel in de praktijk werkt.</p>
+ <p style="font-size:12px; color:#C86B2A; margin-top:8px; font-style:italic;">Let op: onderstaande casussen zijn illustratief en tonen hoe de database in de toekomst kan functioneren. De getoonde scores en ketenzichten zijn nog niet operationeel.</p>
+
+ <div style="display:flex; gap:20px; margin:24px 0; flex-wrap:wrap;">
+ <div style="flex:1; min-width:280px; background:#e8f5e9; border-radius:10px; padding:18px; border-left:5px solid #4CAF50;">
+ <h3 style="color:#2e7d32; margin:0 0 10px;">Code Groen – Restlevensduur &gt;25 jaar</h3>
+ <p style="font-size:13px; margin:4px 0;"><strong>PAND:</strong> BAG-ID, bouwjaar 1955, rijtjeswoning</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>FUNDERING:</strong> Houten palen, grenen, conditie goed (feitelijk)</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>WATER:</strong> GLG -1,8m, peilgebied stabiel</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>RISICO-INDICATOR:</strong> Score 12/103, label: Waarschijnlijk</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>MAATREGEL:</strong> Monitoring – periodieke peilbuismeting</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>PANDRELATIE:</strong> Gedeelde constructiemuur met 2 buurpanden</p>
+ <p style="font-size:12px; color:#555; margin-top:10px;"><em>Actie: monitoring-scenario. Database levert periodieke trendanalyse.</em></p>
+ </div>
+
+ <div style="flex:1; min-width:280px; background:#fff3e0; border-radius:10px; padding:18px; border-left:5px solid #FF9800;">
+ <h3 style="color:#e65100; margin:0 0 10px;">Code Oranje – Restlevensduur 5–15 jaar</h3>
+ <p style="font-size:13px; margin:4px 0;"><strong>PAND:</strong> BAG-ID, bouwjaar 1938, twee-onder-een-kap</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>FUNDERING:</strong> Houten palen, vuren, kespen aangetast door schimmel en bacteriën (feitelijk)</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>WATER:</strong> GLG -1,2m, dalende trend, droogstandkans hoog</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>RISICO-INDICATOR:</strong> Score 67/103, label: Feitelijk</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>MELDING:</strong> Eigenaar meldt scheuren, loket verwijst door</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>SCHADE:</strong> Scheurvorming gevel, ernst: matig</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>PANDRELATIE:</strong> Gedeeld hoogwatercircuit met 8 panden</p>
+ <p style="font-size:12px; color:#555; margin-top:10px;"><em>Actie: prioritering en actieve opvolging. Ketenzicht toont: indicatie &#x2192; melding &#x2192; onderzoek &#x2192; diagnose.</em></p>
+ </div>
+
+ <div style="flex:1; min-width:280px; background:#ffebee; border-radius:10px; padding:18px; border-left:5px solid #f44336;">
+ <h3 style="color:#c62828; margin:0 0 10px;">Code Rood – Restlevensduur 1–5 jaar</h3>
+ <p style="font-size:13px; margin:4px 0;"><strong>PAND:</strong> BAG-ID, bouwjaar 1932, vrijstaand</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>FUNDERING:</strong> Houten palen, elzen, ernstige aantasting (feitelijk)</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>WATER:</strong> GLG -0,8m, structurele droogstand</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>RISICO-INDICATOR:</strong> Score 94/103, label: Feitelijk</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>MELDING:</strong> Meerdere meldingen, doorverwezen naar geotechnisch bureau</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>SCHADE:</strong> Ernstige verzakking, scheuren in dragende muren</p>
+ <p style="font-size:13px; margin:4px 0;"><strong>MAATREGEL:</strong> Hersteladvies: sloop-nieuwbouw niveau</p>
+ <p style="font-size:12px; color:#555; margin-top:10px;"><em>Actie: directe interventie met financiële ondersteuning (FDF 3.0). In totaal 13 code-roodgevallen geïdentificeerd.</em></p>
+ </div>
+ </div>
+
+ <div style="background:#f0f4f8; border-radius:8px; padding:16px; margin-top:16px;">
+ <h3 style="margin:0 0 8px;">Ketenzicht door het datamodel</h3>
+ <p style="font-size:13px; margin:4px 0;">Elke casus doorloopt dezelfde keten in het model: <strong>PAND</strong> &#x2192; <strong>FUNDERING</strong> + <strong>BODEM</strong> + <strong>WATER</strong> &#x2192; <strong>RISICO-INDICATOR</strong> &#x2192; <strong>MELDING</strong>/<strong>SCHADE</strong> &#x2192; <strong>MAATREGEL</strong>. De <strong>PANDRELATIE</strong> signaleert wanneer buurpanden mee moeten worden betrokken. Het verschil zit in de intensiteit: code groen vraagt alleen monitoring, code oranje vraagt analyse en prioritering, code rood vraagt directe actie.</p>
+ <p style="font-size:12px; color:#666; margin-top:8px;"><em>Bron: werksessie 22 maart 2026 met Wetterskip, Provincie, Veenweidesamenwerking en gemeente Leeuwarden. Casussen gebaseerd op gezamenlijk onderzoek naar hoogwatercircuits (2020, circa 20 woningen).</em></p>
+ </div>
+ </div>
+ </div>
+
+ </div>
+</div>
+
+<script>
+// ==========================================
+// DATA – PAS HIER AAN OM ENTITEITEN TE WIJZIGEN
+// ==========================================
+
+const entities = {
+ PAND: {
+ label: "PAND", type: "anker", color: "#FFBA00", textColor: "#2D3748",
+ desc: "Centrale anker-entiteit. Elk pand is uniek via BAG-ID met adres, bouwjaar, geometrie en pandtype. Het pand is het object waarop risicoclassificatie plaatsvindt, waaraan maatregelen worden gekoppeld, en waarover beleidsinformatie wordt geaggregeerd.",
+ fields: "BAG-ID, adres, PC6, huisnummer, bouwjaar, geometrie, pandtype, coördinaten",
+ wsFields: "Bouwjaarklasse, Plaatsnaam/kern, Ligging in hoogwatercircuit (ja/nee), Ligging in veenweidegebied (ja/nee), Postcodegebied",
+ loketFields: null,
+ coverage: "100% (~80.000 panden)",
+ fase: "1",
+ geonovum: "Gebouw (BAG-pand)"
+ },
+ FUNDERING: {
+ label: "FUNDERING", type: "kern", color: "#2C7BB6", textColor: "#fff",
+ desc: "Constructie-element dat het pand verbindt met de ondergrond. In het Friese veenweidegebied betreft dit vaak houten paalfunderingen of ondiepe fundering op staal. De funderingsinformatie is vaak niet feitelijk bekend maar afgeleid uit bouwjaar, bouwstijl of gebiedskenmerken. Bij houten paalfunderingen is de houtsoort (grenen, vuren, elzen) relevant voor de degradatiesnelheid. Kespen (verbindingselementen) kunnen sneller degraderen dan de palen zelf. Bacteriële aantasting kan al optreden vóórdat droogstand zich voordoet.",
+ fields: "Type, materiaal, houtsoort, diepte, conditie, conditie kespen, aantastingsvorm (schimmel/bacterieel), bouwjaar fundering, funderingstype (feitelijk/afgeleid)",
+ wsFields: "Kans op houten fundering (%), Funderingstype (vastgesteld), Bovenkant houten palen (meetwaarde), Bovenkant palen t.o.v. NAP, Bovenkant palen t.o.v. maaiveld, Bovenkant palen t.o.v. vloerpeil",
+ gemFields: "Funderingswijze per wijk (houten palen met/zonder betonopzetter, staal, beton), Methode bouwrijp maken (cunettenmethode / integrale ophoging)",
+ loketFields: null,
+ coverage: "5-10% feitelijk, 30-40% indicatief",
+ fase: "1",
+ geonovum: "Funderingsconstructie"
+ },
+ BODEM: {
+ label: "BODEM", type: "kern", color: "#2C7BB6", textColor: "#fff",
+ desc: "Geotechnische eigenschappen van de ondergrond: bodemtype, veendikte, zettingsgevoeligheid. Werkt op twee resoluties: gebiedsdekkend (Bodemkaart/BRO) en pandspecifiek (sonderingen). Veengrond krimpt bij droogte en oxideert bij lage grondwaterstanden.",
+ fields: "Bodemtype, veendikte, klei-op-veen, deklaagdikte, draagkracht, zettingscoëfficiënt",
+ wsFields: "Holocene deklaagdikte, Gemiddelde veendikte, Gemiddelde zettingsgevoeligheid, Gemiddelde dikte holocene laag, Veenindicatie",
+ loketFields: null,
+ coverage: "95-100% (gebiedsniveau)",
+ fase: "1",
+ geonovum: "Ondergrondkarakteristiek"
+ },
+ WATER: {
+ label: "WATER", type: "kern", color: "#2C7BB6", textColor: "#fff",
+ desc: "Grondwater- en oppervlaktewatergegevens. Grondwaterstanden zijn een directe factor in funderingsrisico: te lage grondwaterstanden veroorzaken paalrot bij houten funderingen. Verbonden met peilgebieden (Wetterskip) en meetreeksen van peilbuizen.",
+ fields: "GLG, peil, drooglegging, peilgebied, waterstandsreeksen",
+ wsFields: "Gemiddeld laagste grondwaterstand (GLG), Gemiddeld waterpeil, Gemodelleerde GLG (MIPWA 3.1), Grondwaterdekking bij GLG, Grondwaterdekking bij peilniveau, Ligging in hoogwatercircuit",
+ gemFields: "Gemeentelijk grondwatermeetnet (langjarige RLG-reeksen, aanvullend op BRO-peilbuizen)",
+ loketFields: null,
+ coverage: "90-95% (peilgebiedniveau)",
+ fase: "1",
+ geonovum: "Grondwatersituatie"
+ },
+ METING: {
+ label: "METING", type: "kern", color: "#2C7BB6", textColor: "#fff",
+ desc: "Record van een waarneming: grondwaterstandsmeting, peilbuisregistratie, InSAR-satellietmeting van verzakking, of fysieke inspectie. Metingen zijn per definitie brondata (niveau 1). Meetreeksen worden als samenhangende sets behandeld voor trendanalyse.",
+ fields: "Meettype, waarde, datum, eenheid, locatie, meetmethode, bron, meetreeks-ID",
+ wsFields: "AHN-hoogte 10e percentiel, AHN-hoogte 50e percentiel, Gemiddelde AHN-hoogte, Gemiddelde maaiveldhoogte, Ingemeten maaiveldhoogte, Ingemeten vloerpeil",
+ loketFields: null,
+ coverage: "5-15% (pandspecifiek)",
+ fase: "1",
+ geonovum: "Waarneming (afstemming nodig)"
+ },
+ RISICO: {
+ label: "RISICO-\nINDICATOR", type: "kern", color: "#2C7BB6", textColor: "#fff",
+ desc: "Berekende risicoscore per pand op basis van brondata (bodem, water, funderingstype, bouwjaar) met modellen (o.a. TNO/Deltares). Expliciet niveau 2: nooit als feiten gepresenteerd. Bij elke indicator wordt vastgelegd welk model, welke aannames, welk scenario en wat de onzekerheid is.",
+ fields: "Score, model, versie, onzekerheid, datum, scenario, betrouwbaarheidsinterval",
+ wsFields: "Funderingsrisicoscore (0-103), Droogstandkans bij GLG, Droogstandkans bij peilniveau, Berekend vloerpeil",
+ loketFields: null,
+ coverage: "0% (pas in fase 2)",
+ fase: "1-2",
+ geonovum: "Risicobeoordeling"
+ },
+ MAATREGEL: {
+ label: "MAATREGEL", type: "kern", color: "#2C7BB6", textColor: "#fff",
+ desc: "Uitgevoerde of geplande interventie: funderingsherstel, preventieve ingreep, monitoringactiviteit. Registratie om actuele pandstatus te kennen en effectiviteit van maatregelen te monitoren over tijd. Wordt uitgebreid met actieregistratie in fase 2/3.",
+ fields: "Type, status, datum, kosten, uitvoerder, effectinformatie",
+ wsFields: null,
+ loketFields: null,
+ coverage: "<5%",
+ fase: "1-2"
+ },
+ SCHADE: {
+ label: "SCHADE", type: "kern", color: "#2C7BB6", textColor: "#fff",
+ desc: "Waargenomen of gemelde schade aan een pand die mogelijk gerelateerd is aan funderingsproblematiek. Bronnen: bewoners, gemeenten, Funderingsloket, verzekeraars. Niet altijd gevalideerd – relatie met funderingsproblematiek is niet altijd vastgesteld.",
+ fields: "Schadetype, ernst, oorzaak, datum, verificatiestatus, relatie fundering",
+ wsFields: null,
+ loketFields: null,
+ coverage: "2-5%",
+ fase: "1"
+ },
+ MELDING: {
+ label: "MELDING", type: "kern", color: "#2C7BB6", textColor: "#fff",
+ desc: "Contactmoment tussen eigenaar/bewoner en het Funderingsloket. Registreert het bredere proces: moment van contact, aard van de vraag, gegeven advies en opvolging. Kan betrekking hebben op schade, preventieve vragen, informatiebehoeften of zorgen zonder zichtbare schade.",
+ fields: "Melding-ID, datum melding, datum afhandeling, doorlooptijd, behandelaar, gemeente, type advies, opmerkingen",
+ wsFields: null,
+ loketFields: "Veenweidegebied (ja/nee), Samenwerkingsgemeente (ja/nee), Huisbezoek gepland (ja/nee + datum), Verzenddatum rapportage, Indicatie funderingstype, Materiaaltype fundering, Type advies",
+ coverage: "Funderingsloket (HubSpot CRM)",
+ fase: "1",
+ geonovum: "Geen equivalent (Fries-specifieke extensie)"
+ },
+ // ONDERSTEUNENDE ENTITEITEN
+ PERCEEL: {
+ label: "PERCEEL", type: "support", color: "#4A90D9", textColor: "#fff",
+ desc: "Kadastraal perceel waarop een of meer panden staan, geïdentificeerd via het Kadaster. Koppeling tussen pand en eigendomssituatie; relevant voor subsidie- en maatregelregistratie.",
+ fields: "Perceelnummer, kadastrale gemeente, oppervlakte, eigenaar",
+ wsFields: null, loketFields: null, coverage: "Kadaster", fase: "1"
+ },
+ BUURTWIJK: {
+ label: "BUURT/\nWIJK", type: "support", color: "#4A90D9", textColor: "#fff",
+ desc: "Statistische eenheid binnen een gemeente, gebruikt voor gebiedsgericht beleid. Aggregatieniveau voor gebiedsrapportages en prioritering.",
+ fields: "CBS-buurtcode, wijkcode, naam, gemeente",
+ wsFields: null, loketFields: null, coverage: "CBS", fase: "1"
+ },
+ GEMEENTE: {
+ label: "GEMEENTE", type: "support", color: "#4A90D9", textColor: "#fff",
+ desc: "Bestuurlijke eenheid; bronhouder van BAG-data en gemeentelijk bouwarchief. Organisatorisch schaalniveau; verantwoordelijk voor lokaal beleid. 8 veenweidegemeenten in scope.",
+ fields: "Gemeentecode, naam, provincie, BAG-bronhouder",
+ wsFields: null, loketFields: null, coverage: "8 gemeenten", fase: "1"
+ },
+ PEILGEBIED: {
+ label: "PEIL-\nGEBIED", type: "support", color: "#4A90D9", textColor: "#fff",
+ desc: "Hydrologisch beheersgebied van het Wetterskip, waarbinnen waterpeilen worden vastgesteld. Functioneel schaalniveau dat administratieve grenzen doorsnijdt; essentieel voor relatie water-fundering.",
+ fields: "Gebiedscode, naam, streefpeil, oppervlakte",
+ wsFields: null, loketFields: null, coverage: "Wetterskip", fase: "1"
+ },
+ ONDERZOEK: {
+ label: "ONDER-\nZOEK", type: "support", color: "#4A90D9", textColor: "#fff",
+ desc: "Een uitgevoerd geotechnisch of bouwkundig onderzoek, resulterend in een rapport. Bron van feitelijke informatie over fundering, bodem en staat van een pand.",
+ fields: "Onderzoekstype, datum, uitvoerder, rapport-ID, resultaten",
+ wsFields: null, loketFields: null, coverage: "Adviesbureaus", fase: "1"
+ },
+ BOUWARCHIEF: {
+ label: "BOUW-\nARCHIEF", type: "support", color: "#4A90D9", textColor: "#fff",
+ desc: "Verzameling van historische bouwtekeningen, vergunningen en technische documentatie. Bron van informatie over oorspronkelijke constructie; vaak ongestructureerd en niet gedigitaliseerd.",
+ fields: "Bouwtekening, vergunning, bouwjaar, constructietype",
+ wsFields: null, loketFields: null, coverage: "Gemeenten", fase: "1-2"
+ },
+ PANDRELATIE: {
+ label: "PAND-\nRELATIE", type: "support", color: "#4A90D9", textColor: "#fff",
+ desc: "Vastgelegde bouwkundige of hydrologische samenhang tussen twee of meer panden die relevant is voor funderingsaanpak. Funderingsherstel kan niet altijd per individueel pand worden uitgevoerd: rijtjeswoningen delen muren, panden in hetzelfde hoogwatercircuit beïnvloeden elkaar. Door deze relaties expliciet vast te leggen, kan de database adviseren over gezamenlijke aanpak.",
+ fields: "Relatietype, betrokken panden, toelichting",
+ wsFields: null, loketFields: null, coverage: "Gemeenten/Loket", fase: "1"
+ },
+ // UITBREIDING
+ ACTIE: {
+ label: "ACTIE-\nREGISTRATIE", type: "future", color: "#4A9E6F", textColor: "#fff",
+ desc: "Uitbreiding fase 2/3: vastleggen van ondernomen acties aan funderingen door eigenaren of professionals. Zowel professioneel als door woningeigenaren geïnitieerd.",
+ fields: "Actietype, initiator, datum, status, toelichting",
+ wsFields: null, loketFields: null, coverage: "Fase 2/3", fase: "2-3"
+ },
+ EIGENAAR: {
+ label: "EIGENAAR-\nPORTAAL", type: "future", color: "#4A9E6F", textColor: "#fff",
+ desc: "Uitbreiding fase 2/3: woningeigenaren krijgen inzage in pandgegevens en kunnen eigen metingen aanleveren (grondwaterstanden, verzakkingsmonitoring). Citizen-data krijgt apart kwaliteitslabel.",
+ fields: "Inzage pandgegevens, eigen metingen, grondwater, verzakking",
+ wsFields: null, loketFields: null, coverage: "Fase 2/3", fase: "2-3"
+ }
+};
+
+// ==========================================
+// RELATIES – PAS HIER AAN OM VERBINDINGEN TE WIJZIGEN
+// ==========================================
+
+const links = [
+ { from: "PAND", to: "FUNDERING", label: "heeft", type: "direct" },
+ { from: "PAND", to: "BODEM", label: "ligt op", type: "direct" },
+ { from: "PAND", to: "WATER", label: "in peilgebied", type: "direct" },
+ { from: "PAND", to: "METING", label: "gemeten", type: "direct" },
+ { from: "PAND", to: "RISICO", label: "risicoscore", type: "derived" },
+ { from: "PAND", to: "MAATREGEL", label: "ondergaat", type: "direct" },
+ { from: "PAND", to: "SCHADE", label: "schade aan", type: "direct" },
+ { from: "PAND", to: "MELDING", label: "via adres", type: "direct" },
+ { from: "WATER", to: "PEILGEBIED", label: "in", type: "direct" },
+ { from: "WATER", to: "FUNDERING", label: "beïnvloedt", type: "derived" },
+ { from: "FUNDERING", to: "BODEM", label: "staat in", type: "direct" },
+ { from: "RISICO", to: "FUNDERING", label: "input", type: "derived" },
+ { from: "RISICO", to: "BODEM", label: "input", type: "derived" },
+ { from: "RISICO", to: "WATER", label: "input", type: "derived" },
+ { from: "MAATREGEL", to: "ACTIE", label: "registratie", type: "future" },
+ { from: "PAND", to: "EIGENAAR", label: "inzage", type: "future" },
+ { from: "EIGENAAR", to: "METING", label: "citizen-data", type: "future" },
+ { from: "PAND", to: "PERCEEL", label: "op perceel", type: "direct" },
+ { from: "PAND", to: "BUURTWIJK", label: "in buurt", type: "direct" },
+ { from: "PAND", to: "GEMEENTE", label: "in gemeente", type: "direct" },
+ { from: "MELDING", to: "SCHADE", label: "kan bevatten", type: "direct" },
+ { from: "MELDING", to: "MAATREGEL", label: "leidt tot", type: "direct" },
+ { from: "SCHADE", to: "MAATREGEL", label: "aanleiding", type: "direct" },
+ { from: "FUNDERING", to: "ONDERZOEK", label: "onderzocht", type: "direct" },
+ { from: "FUNDERING", to: "BOUWARCHIEF", label: "historisch", type: "direct" },
+ { from: "PAND", to: "PANDRELATIE", label: "gerelateerd aan", type: "direct" },
+ { from: "METING", to: "RISICO", label: "invoer", type: "derived" },
+ { from: "MAATREGEL", to: "METING", label: "effectmeting", type: "direct" },
+];
+
+// ==========================================
+// DATABRONNEN – PAS HIER AAN OM BRONNEN TE WIJZIGEN
+// ==========================================
+
+const dataSources = [
+ {
+ name: "BAG (Basisregistratie Adressen en Gebouwen)",
+ type: "open", desc: "Landelijke basisregistratie met alle adressen en gebouwen in Nederland. Gebiedsdekkend en open beschikbaar via PDOK.",
+ entities: ["PAND"], details: "~80.000 panden in 8 veenweidegemeenten. BAG-ID is het anker van het datamodel."
+ },
+ {
+ name: "BRO (Basisregistratie Ondergrond)",
+ type: "open", desc: "Landelijke basisregistratie van de ondergrond: bodemprofielen, sonderingen, grondwatergegevens.",
+ entities: ["BODEM", "METING"], details: "Gebiedsdekkend op regionaal niveau. Pandspecifieke data beperkt beschikbaar."
+ },
+ {
+ name: "Bodemkaart (WUR/Alterra)",
+ type: "open", desc: "Gebiedsdekkende bodemtypering op schaal 1:50.000 met veendikte, klei-op-veen en bodemtype.",
+ entities: ["BODEM"], details: "Dekt het veenweidegebied nagenoeg volledig."
+ },
+ {
+ name: "Wetterskip Fryslân – Analysemodel",
+ type: "ws", desc: "Pandgekoppeld analysemodel met circa 300.000 panden en meer dan 50 attributen. Bevat funderingsrisicoscores, grondwatergegevens, bodemdoorsneden en AHN-hoogtedata.",
+ entities: ["PAND", "FUNDERING", "BODEM", "WATER", "METING", "RISICO"],
+ details: "Meest omvangrijke bestaande dataset. Bron: analyse_pandenpuntenklima. Aanvullend: bodemscorekaart (901 buurten) en KCAF-risicogebiedsclassificatie (21.504 PC6-gebieden)."
+ },
+ {
+ name: "Wetterskip Fryslân – Peilgebieden",
+ type: "ws", desc: "Beheergebieden met vastgestelde waterpeilen, grondwaterstanden en peilbesluiten. Wetterskip Fryslân levert grondwaterstanden en bodemdalingsdata via het Veenweideprogramma (P1 Water).",
+ entities: ["WATER", "PEILGEBIED"], details: "Structurele levering van peilgebieden en grondwaterstanden. Verbonden met het Feangreide Fryslân-programma voor duurzame waterhuishouding."
+ },
+ {
+ name: "Funderingsloket Fryslân (HubSpot CRM)",
+ type: "loket", desc: "Gestructureerde meldingsdata uit het CRM-systeem: melding-ID, datum, gemeente, funderingstype, materiaaltype, adviestype, doorlooptijd, huisbezoek, rapportage.",
+ entities: ["MELDING", "SCHADE"],
+ details: "Bevat: veenweidegebied-indicatie, samenwerkingsgemeente, huisbezoek gepland (ja/nee + datum), verzenddatum rapportage, indicatie funderingstype, materiaaltype fundering, type advies. Koppeling aan PAND via PC6 + huisnummer."
+ },
+ {
+ name: "TNO / Deltares",
+ type: "extern", desc: "Risicomodellen voor funderingsproblematiek op basis van bedreiging-blootstelling-kwetsbaarheid. Levert risico-indicatoren in fase 2.",
+ entities: ["RISICO"], details: "Pas geïntegreerd in fase 2 na validatie van brondata."
+ },
+ {
+ name: "FunderMaps (KCAF)",
+ type: "extern", desc: "Commercieel platform met vijfstappenmethodiek voor funderingsrisicoanalyse. GevelScan-methodologie. Platformoptie B in scenariodoorrekening.",
+ entities: ["FUNDERING", "RISICO"], details: "Kan dekkingsgraad op FUNDERING en RISICO-INDICATOR sneller verhogen. Governance-afspraken over data-eigenaarschap vereist."
+ },
+ {
+ name: "InSAR / SkyGeo (satelliet)",
+ type: "extern", desc: "Satellietmetingen van bodemverzakking en pandbewegingen. Hoge ruimtelijke dekking maar pas in fase 2 geïntegreerd.",
+ entities: ["METING"], details: "Beschikbaar maar pas in fase 2 gekoppeld aan pandniveau."
+ },
+ {
+ name: "Gemeenten (bouwarchief)",
+ type: "open", desc: "Historische bouwtekeningen, vergunningen en technische documentatie. Vaak ongestructureerd en niet gedigitaliseerd.",
+ entities: ["BOUWARCHIEF", "FUNDERING"], details: "Per gemeente wisselende beschikbaarheid en digitaliseringsgraad."
+ },
+ {
+ name: "Gemeenten (droogte-risicoanalyse)",
+ type: "extern", desc: "Gemeentelijke droogte-risicoanalyses met risicomatrices per funderingstype, funderingswijze op wijkniveau (incl. onderscheid betonopzetter), methode bouwrijp maken en schadekwantificering. Potenti\u00eble bron voor verrijking van FUNDERING en RISICO-INDICATOR.",
+ entities: ["FUNDERING", "RISICO", "BODEM"], details: "Niet via landelijke registraties beschikbaar. Per gemeente wisselend; inventarisatie in fase 2."
+ },
+ {
+ name: "Gemeenten (grondwatermeetnet)",
+ type: "extern", desc: "Eigen gemeentelijke grondwatermeetnetten met langjarige meetreeksen, aanvullend op BRO-peilbuizen. Bieden lokale RLG-data die relevant is voor droogte-gerelateerd funderingsrisico.",
+ entities: ["WATER", "METING"], details: "Vergroot ruimtelijke dekking grondwaterdata. Meetnet_type als metadata vastleggen."
+ },
+ {
+ name: "Peilbuisbeheerders",
+ type: "open", desc: "Meetreeksen van peilbuizen met grondwaterstanden over langere periodes.",
+ entities: ["METING", "WATER"], details: "Beperkt aantal meetpunten, maar waardevolle tijdreeksen."
+ },
+ {
+ name: "NHR / KCAF (Nationaal Funderingsherstel Register)",
+ type: "extern", desc: "Landelijk register van uitgevoerd funderingsherstel (27.000+ registraties, dec 2025). Bevat hersteltype, datum, adres en certificering. Geschatte dekking: 1/3 tot 1/5 van alle herstelde panden.",
+ entities: ["MAATREGEL", "PAND"], details: "Sinds dec 2025 actief gepromoot via KCAF-loketten. Koppeling via adres/BAG-ID. Relevant om dubbel onderzoek op reeds herstelde panden te voorkomen."
+ },
+ {
+ name: "LVG (Landelijke Voorziening Gebouwgegevens)",
+ type: "open", desc: "Landelijke voorziening voor gebouwgegevens in ontwikkeling (verkenningsfase, Kadaster in opdracht BZK). Beoogt federatieve ontsluiting van gebouwgerelateerde bronnen via BAG-ID als sleutel.",
+ entities: ["PAND"], details: "Nog niet operationeel. Verkenning afgerond juli 2024. Aansluiting Friese funderingsdatabase bij LVG is voorzien in de roadmap."
+ },
+ {
+ name: "Kadaster / PDOK",
+ type: "open", desc: "Geodata-ontsluiting: geocodeerservice, kaartservices, downloads. Platform voor open geodata van de overheid (OGC/W3C-standaarden).",
+ entities: ["PERCEEL", "PAND"], details: "Open data. Centrale toegangspoort voor BAG, BRO, BRK, AHN, BGT en andere geo-datasets."
+ },
+ {
+ name: "CBS (Centraal Bureau voor de Statistiek)",
+ type: "open", desc: "Statistische gebiedsindelingen: buurten, wijken, gemeenten.",
+ entities: ["BUURTWIJK", "GEMEENTE"], details: "Standaard gebiedsindeling voor aggregatie."
+ },
+ {
+ name: "RVO Funderingslabel (in ontwikkeling)",
+ type: "extern", desc: "Landelijk funderingslabel voor alle Nederlandse woningen, in ontwikkeling bij RVO als onderdeel van de Nationale Aanpak Funderingsproblematiek. Wordt verplicht in taxatierapporten.",
+ entities: ["PAND", "FUNDERING", "RISICO"], details: "Het Friese model kan het landelijke label voeden met regionaal rijkere data. Frysl\u00e2n is aangewezen als koploperregio binnen de Nationale Aanpak."
+ },
+ {
+ name: "BRK (Basisregistratie Kadaster)",
+ type: "open", desc: "Percelen, eigendom, hypotheken en zakelijke rechten. Cruciaal voor de koppeling pand\u2013perceel\u2013eigenaar en voor subsidie- en maatregelregistratie.",
+ entities: ["PERCEEL", "PAND"], details: "Deels open via PDOK. Eigendomsgegevens via afstemming met Kadaster. Complicatie: 1:n-relaties tussen panden en percelen (appartementsrecht)."
+ },
+ {
+ name: "AHN (Actueel Hoogtebestand Nederland)",
+ type: "open", desc: "Landelijk hoogtebestand met gedetailleerde maaiveldhoogtes. Gebruikt voor verzakkingsdetectie en hoogteverschilanalyse per pand.",
+ entities: ["METING", "BODEM"], details: "AHN4/5 beschikbaar, hoge resolutie. Open data via PDOK. Wordt al gebruikt in het Wetterskip-analysemodel."
+ },
+ {
+ name: "WOZ (Waardering Onroerende Zaken)",
+ type: "extern", desc: "Objectwaarde en eigendomssituatie per pand. Koppelbaar via BAG-ID. Relevant voor subsidieberekening en financieel-economische beleidsrapportages.",
+ entities: ["PAND", "PERCEEL"], details: "Jaarlijks geactualiseerd door gemeenten. Beschikbaar via afstemming."
+ },
+ {
+ name: "BRP (Basisregistratie Personen)",
+ type: "extern", desc: "Persoonsgegevens en adres-inschrijving. Relevant voor eigenaaridentificatie in fase 2/3 (Eigenaarportaal).",
+ entities: ["PAND"], details: "Alleen toegankelijk via wettelijke grondslag. Pas relevant na afronding DPIA in fase 1."
+ },
+ {
+ name: "BGT (Basisregistratie Grootschalige Topografie)",
+ type: "open", desc: "Gedetailleerde digitale kaart met gebouwen, waterlopen, wegen en groen. Waterschappen zijn medebronhouder.",
+ entities: ["PAND", "PEILGEBIED"], details: "Open data via PDOK. Relevant voor ruimtelijke context en waterlopen in relatie tot funderingsrisico."
+ },
+ {
+ name: "Veenweideprogramma (P1 Water)",
+ type: "ws", desc: "Bodemdalingsdata, grondwaterstanden en peiloptimalisatie in het Friese veenweidegebied. Onderdeel van Feangreide Frysl\u00e2n.",
+ entities: ["WATER", "BODEM", "METING"], details: "Structurele levering via Wetterskip en Provincie. Levert contextdata voor langetermijntrends bodemdaling."
+ },
+ {
+ name: "EP-online (Energieprestatie)",
+ type: "extern", desc: "Energielabels en energieprestatie-indicatoren per verblijfsobject. Koppelbaar via BAG-ID.",
+ entities: ["PAND"], details: "Openbaar op labelniveau. Niet primair funderingsgerelateerd, maar relevant voor integraal gebouwbeeld en LVG-aansluiting."
+ },
+ {
+ name: "Geonovum informatiemodel funderingsdata",
+ type: "extern", desc: "Landelijk informatiemodel voor funderingsdata in ontwikkeling (in opdracht Min. VRO). Referentie voor begrippenkader en entiteitdefinities.",
+ entities: ["PAND", "FUNDERING", "RISICO"], details: "Per entiteit is het beoogde Geonovum-equivalent opgenomen in het Friese model. Nog niet definitief gepubliceerd."
+ },
+ {
+ name: "DSGO (Digitaal Stelsel Gebouwde Omgeving)",
+ type: "extern", desc: "Standaarden en afspraken voor data-uitwisseling in de gebouwde omgeving (IFC, BIM). Gefaciliteerd door DigiGO.",
+ entities: ["PAND"], details: "In ontwikkeling (2025\u20132027). Mogelijk relevant voor bouwkundige funderingsdata in latere fasen."
+ },
+ {
+ name: "DSO (Digitaal Stelsel Omgevingswet)",
+ type: "extern", desc: "Omgevingswet-informatie: vergunningen, omgevingsplannen, meldingen. Interbestuurlijk stelsel op basis van open standaarden.",
+ entities: ["PAND"], details: "In ontwikkeling. Relevant voor vergunningendata en omgevingsplannen die raken aan funderingsproblematiek."
+ },
+ {
+ name: "Commerci\u00eble funderingsdata",
+ type: "extern", desc: "Funderingsrisico-indicatoren en risicokaarten van diverse commerci\u00eble aanbieders. Methode doorgaans niet open.",
+ entities: ["FUNDERING", "RISICO"], details: "Commercieel beschikbaar. Opname in publiek model vereist afspraken over eigenaarschap, methode-transparantie en kwaliteitsborging."
+ }
+];
+
+// ==========================================
+// DEKKINGSGRAAD DATA
+// ==========================================
+
+// ==========================================
+// TEKENFUNCTIES
+// ==========================================
+
+const svg = document.getElementById("diagram");
+const tooltip = document.getElementById("tooltip");
+let W, H;
+
+function resize() {
+ const wrap = document.querySelector("#view-stermodel");
+ if (!wrap || wrap.style.display === 'none') return;
+ W = wrap.clientWidth;
+ H = wrap.clientHeight - 70;
+ svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+ draw();
+}
+
+function draw() {
+ svg.innerHTML = "";
+ const cx = W / 2, cy = H / 2 - 20;
+ const R_kern = Math.min(W, H) * 0.28;
+ const R_support = R_kern * 1.55;
+ const R_future = R_kern * 1.55;
+ const nodeR = 38;
+
+ const positions = {};
+ positions.PAND = { x: cx, y: cy };
+
+ const kernOrder = ["FUNDERING", "BODEM", "WATER", "METING", "RISICO", "MAATREGEL", "SCHADE", "MELDING"];
+ kernOrder.forEach((k, i) => {
+ const a = (i / kernOrder.length) * Math.PI * 2 - Math.PI / 2;
+ positions[k] = { x: cx + Math.cos(a) * R_kern, y: cy + Math.sin(a) * R_kern };
+ });
+
+ const supportOrder = ["PERCEEL", "BUURTWIJK", "GEMEENTE", "PEILGEBIED", "ONDERZOEK", "BOUWARCHIEF"];
+ supportOrder.forEach((k, i) => {
+ const a = (i / supportOrder.length) * Math.PI * 2 - Math.PI * 0.08;
+ positions[k] = { x: cx + Math.cos(a) * R_support, y: cy + Math.sin(a) * R_support };
+ });
+
+ const futureOrder = ["ACTIE", "EIGENAAR"];
+ futureOrder.forEach((k, i) => {
+ const a = Math.PI * 0.55 + (i * 0.4);
+ positions[k] = { x: cx + Math.cos(a) * R_future, y: cy + Math.sin(a) * R_future };
+ });
+
+ // Draw links
+ links.forEach(link => {
+ const p1 = positions[link.from];
+ const p2 = positions[link.to];
+ if (!p1 || !p2) return;
+
+ const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+ line.setAttribute("x1", p1.x); line.setAttribute("y1", p1.y);
+ line.setAttribute("x2", p2.x); line.setAttribute("y2", p2.y);
+
+ let color = "#ccc", dash = "";
+ if (link.type === "derived") { color = "#2C7BB6"; dash = "6,4"; }
+ else if (link.type === "future") { color = "#4A9E6F"; dash = "4,4"; }
+ else { color = "#bcc8d4"; }
+
+ line.setAttribute("stroke", color);
+ line.setAttribute("stroke-width", link.type === "future" ? "1" : "1.5");
+ if (dash) line.setAttribute("stroke-dasharray", dash);
+ line.classList.add("link");
+ svg.appendChild(line);
+
+ const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+ const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+ label.setAttribute("x", mx); label.setAttribute("y", my - 4);
+ label.setAttribute("text-anchor", "middle");
+ label.classList.add("link-label");
+ label.textContent = link.label;
+ svg.appendChild(label);
+ });
+
+ // Draw nodes
+ Object.entries(entities).forEach(([key, ent]) => {
+ const pos = positions[key];
+ if (!pos) return;
+
+ const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+ g.classList.add("node");
+ g.setAttribute("transform", `translate(${pos.x},${pos.y})`);
+
+ const r = key === "PAND" ? nodeR * 1.35 : (ent.type === "support" || ent.type === "future" ? nodeR * 0.75 : nodeR);
+
+ const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+ circle.setAttribute("r", r);
+ circle.setAttribute("fill", ent.color);
+ circle.setAttribute("stroke", ent.type === "future" ? "#4A9E6F" : "none");
+ circle.setAttribute("stroke-width", ent.type === "future" ? "2" : "0");
+ circle.setAttribute("stroke-dasharray", ent.type === "future" ? "4,3" : "");
+ g.appendChild(circle);
+
+ // WS indicator ring
+ if (ent.wsFields) {
+ const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+ ring.setAttribute("r", r + 4);
+ ring.setAttribute("fill", "none");
+ ring.setAttribute("stroke", "#4A9E6F");
+ ring.setAttribute("stroke-width", "2.5");
+ ring.setAttribute("opacity", "0.7");
+ g.appendChild(ring);
+ }
+
+ // Loket indicator ring
+ if (ent.loketFields) {
+ const ring2 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+ ring2.setAttribute("r", r + 8);
+ ring2.setAttribute("fill", "none");
+ ring2.setAttribute("stroke", "#8B5CF6");
+ ring2.setAttribute("stroke-width", "2");
+ ring2.setAttribute("opacity", "0.6");
+ ring2.setAttribute("stroke-dasharray", "3,3");
+ g.appendChild(ring2);
+ }
+
+ // Gemeente indicator ring
+ if (ent.gemFields) {
+ const ring3 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+ ring3.setAttribute("r", r + (ent.loketFields ? 12 : 8));
+ ring3.setAttribute("fill", "none");
+ ring3.setAttribute("stroke", "#E07020");
+ ring3.setAttribute("stroke-width", "2");
+ ring3.setAttribute("opacity", "0.6");
+ ring3.setAttribute("stroke-dasharray", "5,3");
+ g.appendChild(ring3);
+ }
+
+ // Label
+ const lines = ent.label.split("\n");
+ lines.forEach((line, i) => {
+ const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+ txt.setAttribute("text-anchor", "middle");
+ txt.setAttribute("dy", lines.length > 1 ? (i * 13 - 5) + "px" : "4px");
+ txt.setAttribute("fill", ent.textColor);
+ txt.setAttribute("font-size", key === "PAND" ? "13px" : (ent.type === "support" || ent.type === "future" ? "9px" : "10px"));
+ txt.setAttribute("font-weight", "bold");
+ txt.textContent = line;
+ g.appendChild(txt);
+ });
+
+ g.addEventListener("mouseenter", (e) => showTooltip(e, key, ent));
+ g.addEventListener("mouseleave", hideTooltip);
+ g.addEventListener("click", (e) => showTooltip(e, key, ent));
+
+ svg.appendChild(g);
+ });
+
+ // Ring labels
+ const addRingLabel = (text, radius, angle, color) => {
+ const x = cx + Math.cos(angle) * radius;
+ const y = cy + Math.sin(angle) * radius;
+ const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+ t.setAttribute("x", x); t.setAttribute("y", y);
+ t.setAttribute("text-anchor", "middle");
+ t.setAttribute("font-size", "10px");
+ t.setAttribute("fill", color);
+ t.setAttribute("opacity", "0.4");
+ t.setAttribute("font-weight", "bold");
+ t.textContent = text;
+ svg.appendChild(t);
+ };
+
+ addRingLabel("KERNENTITEITEN", R_kern * 0.55, -Math.PI * 0.25, "#2C7BB6");
+ addRingLabel("ONDERSTEUNEND", R_support * 0.88, Math.PI * 0.42, "#4A90D9");
+}
+
+function showTooltip(e, key, ent) {
+ let html = `<h4>${ent.label.replace("\n", " ")}</h4><div style="color:#F9A825;font-size:10px;margin-bottom:4px;font-style:italic;">Verkenning \u2013 conceptueel, niet definitief</div>${ent.desc}`;
+ html += `<div class="fields"><strong>Attributen:</strong> ${ent.fields}</div>`;
+ if (ent.wsFields) {
+ html += `<div class="fields"><strong>Wetterskip-gegevens:</strong> ${ent.wsFields}</div>`;
+ html += `<span class="ws-badge">Wetterskip-data beschikbaar</span>`;
+ }
+ if (ent.loketFields) {
+ html += `<div class="fields"><strong>Funderingsloket-gegevens:</strong> ${ent.loketFields}</div>`;
+ html += `<span class="loket-badge">Funderingsloket-data</span>`;
+ }
+ if (ent.gemFields) {
+ html += `<div class="fields"><strong>Potenti\u00eble gemeentelijke data:</strong> ${ent.gemFields}</div>`;
+ html += `<span style="display:inline-block;background:#E07020;color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;margin-top:4px;">Gemeentelijke data (fase 2)</span>`;
+ }
+ html += `<div class="fields" style="margin-top:4px"><strong>Fase:</strong> ${ent.fase}</div>`;
+ if (ent.geonovum) {
+ html += `<div class="geonovum-mapping"><strong>Rijk / Geonovum:</strong> ${ent.geonovum} <em>(in ontwikkeling)</em></div>`;
+ html += `<span class="geonovum-badge">Landelijk informatiemodel (in ontwikkeling)</span>`;
+ }
+
+ // Show relationships
+ const rels = links.filter(l => l.from === key || l.to === key);
+ if (rels.length > 0) {
+ html += `<div class="rel-list"><strong>Relaties:</strong> `;
+ html += rels.map(r => {
+ const other = r.from === key ? r.to : r.from;
+ return `${r.label} → ${entities[other]?.label.replace("\n"," ") || other}`;
+ }).join(", ");
+ html += `</div>`;
+ }
+
+ tooltip.innerHTML = html;
+ tooltip.style.opacity = "1";
+
+ const rect = document.querySelector("#view-stermodel").getBoundingClientRect();
+ let x = e.clientX - rect.left + 16;
+ let y = e.clientY - rect.top - 10;
+ if (x + 400 > rect.width) x = x - 420;
+ if (y + 250 > rect.height) y = y - 250;
+ tooltip.style.left = x + "px";
+ tooltip.style.top = y + "px";
+}
+
+function hideTooltip() { tooltip.style.opacity = "0"; }
+
+// ==========================================
+// BRONNEN VIEW
+// ==========================================
+
+function renderSources() {
+ const grid = document.getElementById("sources-grid");
+ grid.innerHTML = dataSources.map(s => {
+ const typeClass = s.type === "ws" ? "ws" : s.type === "loket" ? "extern" : s.type === "open" ? "open" : "extern";
+ return `<div class="source-card ${typeClass}">
+ <h4>${s.name}</h4>
+ <div class="source-detail">${s.desc}</div>
+ <div class="source-detail" style="margin-top:6px; font-style:italic;">${s.details}</div>
+ <div class="entity-tags">${s.entities.map(e => `<span class="entity-tag">${e}</span>`).join("")}</div>
+ </div>`;
+ }).join("");
+}
+
+// ==========================================
+// ==========================================
+// TAB NAVIGATIE
+// ==========================================
+
+document.querySelectorAll(".tab").forEach(tab => {
+ tab.addEventListener("click", () => {
+ document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+ tab.classList.add("active");
+ document.querySelectorAll(".view-panel").forEach(v => v.classList.remove("active"));
+ const view = document.getElementById("view-" + tab.dataset.view);
+ if (view) view.classList.add("active");
+ if (tab.dataset.view === "stermodel") setTimeout(resize, 50);
+ });
+});
+
+// ==========================================
+// INITIALISATIE
+// ==========================================
+
+renderSources();
+window.addEventListener("resize", resize);
+resize();
+</script>
+</body>
+</html>
